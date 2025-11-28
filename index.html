@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Süper Şifre Çözücü</title>
+    <style>
+        :root {
+            --bg-color: #E0F7FA;
+            --primary: #FF6F91;
+            --secondary: #FFC75F;
+            --accent: #845EC2;
+            --text: #2C3E50;
+            --success: #00C9A7;
+            --error: #FF5E57;
+        }
+
+        body {
+            font-family: 'Comic Sans MS', 'Varela Round', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* --- BAŞLANGIÇ EKRANI --- */
+        #start-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .big-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            font-size: 2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 10px 0 #D65A7A;
+            transition: transform 0.1s;
+            animation: bounce 2s infinite;
+        }
+        .big-btn:active {
+            transform: translateY(10px);
+            box-shadow: 0 0 0 #D65A7A;
+        }
+
+        /* --- OYUN ALANI --- */
+        #game-container {
+            display: none; /* JS ile açılacak */
+            flex-direction: column;
+            width: 95%;
+            max-width: 600px;
+            height: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        /* Üst Panel: Can ve Seviye */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+        }
+        .hearts { font-size: 1.5rem; color: var(--error); }
+        .level-info { font-size: 1.2rem; font-weight: bold; color: var(--accent); }
+
+        /* İpucu Paneli */
+        #hint-panel {
+            background: #FFF;
+            padding: 15px;
+            border-radius: 20px;
+            margin-bottom: 10px;
+            border: 4px solid var(--secondary);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .hint-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 1.8rem;
+        }
+        .hint-group {
+            background: #f0f0f0;
+            padding: 5px 15px;
+            border-radius: 15px;
+            display: flex;
+            gap: 5px;
+        }
+        .arrow { color: var(--accent); font-weight: bold; }
+
+        /* Soru Paneli */
+        #question-panel {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border-radius: 20px;
+            padding: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+        }
+        .question-icons {
+            display: flex;
+            gap: 15px;
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+        }
+        .answer-slots {
+            display: flex;
+            gap: 15px;
+        }
+        .slot {
+            width: 60px;
+            height: 60px;
+            border: 3px dashed #ccc;
+            border-radius: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+            background: #fafafa;
+        }
+        .slot.filled {
+            border: 3px solid var(--primary);
+            background: #fff0f5;
+        }
+        .slot.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 10px var(--accent);
+        }
+
+        /* Klavye Paneli */
+        #numpad {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 20px;
+        }
+        .num-btn {
+            background: var(--secondary);
+            border: none;
+            border-radius: 50%;
+            aspect-ratio: 1;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #E5B255;
+            transition: all 0.1s;
+        }
+        .num-btn:active {
+            transform: translateY(5px);
+            box-shadow: none;
+        }
+        .num-btn.delete {
+            background: var(--error);
+            box-shadow: 0 5px 0 #D1453F;
+            font-size: 1.2rem;
+        }
+
+        /* --- BOYAMA EKRANI (MODAL) --- */
+        #coloring-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color);
+            z-index: 2000;
+            display: none; /* JS ile açılır */
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+        #coloring-canvas-container {
+            width: 300px;
+            height: 300px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .color-palette {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .color-swatch {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .color-swatch.selected {
+            transform: scale(1.2);
+            border-color: #333;
+        }
+        svg path, svg circle, svg rect {
+            transition: fill 0.2s;
+            cursor: pointer;
+        }
+        svg path:hover {
+            opacity: 0.8;
+        }
+
+        /* --- SVG STİLLERİ --- */
+        .game-svg-icon {
+            width: 1em;
+            height: 1em;
+            vertical-align: -0.15em;
+            overflow: visible;
+        }
+        .question-icons .game-svg-icon {
+            width: 1em;
+            height: 1em;
+        }
+
+        /* --- ANİMASYONLAR --- */
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        .shake { animation: shake 0.4s; }
+
+    </style>
+</head>
+<body>
+
+    <!-- Başlangıç Ekranı -->
+    <div id="start-screen">
+        <h1 style="color: var(--accent); font-size: 3rem; margin-bottom: 10px;">Gizli Şifre</h1>
+        <p style="font-size: 1.5rem; margin-bottom: 40px;">Hayvanların şifresini bulabilir misin?</p>
+        <button class="big-btn" onclick="startGame()">Oyuna Başla ▶</button>
+    </div>
+
+    <!-- Oyun Ekranı -->
+    <div id="game-container">
+        <header>
+            <div class="level-info" id="chapter-level-display">Bölüm 1 - Soru 1</div>
+            <div class="hearts" id="hearts-display">❤️❤️❤️</div>
+        </header>
+
+        <!-- İpuçları -->
+        <div id="hint-panel">
+            <!-- JS ile doldurulacak: [🦁 🐱] -> [1 2] gibi -->
+        </div>
+
+        <!-- Soru ve Cevap Kutuları -->
+        <div id="question-panel">
+            <div class="question-icons" id="question-row">
+                <!-- JS ile doldurulacak: 🐘 🦒 ? -->
+            </div>
+            <div class="answer-slots" id="answer-slots">
+                <!-- Cevap kutuları -->
+            </div>
+        </div>
+
+        <!-- Numara Klavyesi -->
+        <div id="numpad">
+            <button class="num-btn" onclick="handleInput(1)">1</button>
+            <button class="num-btn" onclick="handleInput(2)">2</button>
+            <button class="num-btn" onclick="handleInput(3)">3</button>
+            <button class="num-btn" onclick="handleInput(4)">4</button>
+            <button class="num-btn" onclick="handleInput(5)">5</button>
+            <button class="num-btn" onclick="handleInput(6)">6</button>
+            <button class="num-btn" onclick="handleInput(7)">7</button>
+            <button class="num-btn" onclick="handleInput(8)">8</button>
+            <button class="num-btn" onclick="handleInput(9)">9</button>
+            <button class="num-btn" onclick="handleInput(0)">0</button>
+            <button class="num-btn delete" onclick="handleDelete()">Sil ⬅</button>
+        </div>
+    </div>
+
+    <!-- Boyama Ödül Ekranı -->
+    <div id="coloring-modal">
+        <h2 style="text-align:center; color: var(--accent);">Tebrikler! Bir Hayvan Kazandın!</h2>
+        <p>Hayvanını boya ve kaydet. Oyunda senin boyadığın karakter çıkacak!</p>
+        
+        <div id="coloring-canvas-container">
+            <!-- SVG buraya yüklenecek -->
+        </div>
+
+        <div class="color-palette">
+            <div class="color-swatch" style="background: #FF6F91" onclick="selectColor('#FF6F91')"></div>
+            <div class="color-swatch" style="background: #FFC75F" onclick="selectColor('#FFC75F')"></div>
+            <div class="color-swatch" style="background: #845EC2" onclick="selectColor('#845EC2')"></div>
+            <div class="color-swatch" style="background: #00C9A7" onclick="selectColor('#00C9A7')"></div>
+            <div class="color-swatch" style="background: #4D8076" onclick="selectColor('#4D8076')"></div>
+            <div class="color-swatch" style="background: #008F7A" onclick="selectColor('#008F7A')"></div>
+            <div class="color-swatch" style="background: #C34A36" onclick="selectColor('#C34A36')"></div>
+            <div class="color-swatch" style="background: #FFFFFF; border:1px solid #ccc" onclick="selectColor('#FFFFFF')"></div>
+        </div>
+
+        <button class="big-btn" onclick="saveCharacterAndContinue()">Kaydet ve Devam Et</button>
+    </div>
+
+    <script>
+        // --- OYUN VERİLERİ VE DURUMU ---
+        const EMOJIS = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🐦'];
+        
+        // Bu mapping ile hangi bölüm sonunda hangi emojinin boyanabilir versiyonu açılacak belirliyoruz.
+        const REWARD_MAP = {
+            1: { emoji: '🐻', name: 'Ayıcık', svgId: 'bear' },
+            2: { emoji: '🐱', name: 'Kedicik', svgId: 'cat' },
+            3: { emoji: '🐰', name: 'Tavşan', svgId: 'rabbit' }
+        };
+
+        // Varsayılan Oyun Durumu
+        let gameState = {
+            chapter: 1,
+            level: 1, // 1-5 arası
+            lives: 3,
+            customCharacters: {} // { '🐻': { 'path1': 'color', 'path2': 'color' } }
+        };
+
+        let currentLevelData = {
+            solution: [], // [1, 4, 2]
+            userAnswer: [] // [1, null, null]
+        };
+
+        let currentPainting = {
+            svgId: null,
+            colors: {}
+        };
+        let selectedPaintColor = '#FF6F91';
+
+        // Ses Sentezleyici
+        const synth = window.speechSynthesis;
+
+        // --- BAŞLANGIÇ VE YÜKLEME ---
+        function init() {
+            loadGame();
+        }
+
+        function loadGame() {
+            const saved = localStorage.getItem('bilsemGameSave');
+            if (saved) {
+                gameState = JSON.parse(saved);
+            }
+        }
+
+        function saveGame() {
+            localStorage.setItem('bilsemGameSave', JSON.stringify(gameState));
+        }
+
+        function speak(text) {
+            // Mevcut konuşmayı durdur
+            synth.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'tr-TR';
+            utterance.rate = 0.9; // Çocuklar için biraz yavaş
+            utterance.pitch = 1.1; // Biraz daha sevimli
+            synth.speak(utterance);
+        }
+
+        function startGame() {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('game-container').style.display = 'flex';
+            speak("Merhaba! Şifreleri çözmeye hazır mısın? Resimlere bak ve sayıları bul.");
+            generateLevel();
+        }
+
+        // --- OYUN MANTIĞI VE ÜRETİM ---
+        
+        // Emojiyi veya varsa özelleştirilmiş SVG'yi döndüren fonksiyon
+        function getIconHTML(emoji) {
+            // Eğer bu emoji için kayıtlı bir tasarım varsa SVG döndür
+            if (gameState.customCharacters[emoji]) {
+                return generateCustomSVG(emoji, gameState.customCharacters[emoji]);
+            }
+            // Yoksa standart emojiyi döndür
+            return `<span>${emoji}</span>`;
+        }
+
+        function generateLevel() {
+            // Bölüm zorluğu (Bölüm 1'de 3 elemanlı, sonrasında 4 elemanlı)
+            const itemSize = gameState.chapter === 1 ? 3 : 4;
+            
+            // Rastgele itemSize kadar emoji seç
+            let shuffledEmojis = [...EMOJIS].sort(() => 0.5 - Math.random());
+            let selectedEmojis = shuffledEmojis.slice(0, itemSize);
+
+            // Rastgele sayılar ata (1-9 arası, benzersiz)
+            let shuffledNumbers = [1,2,3,4,5,6,7,8,9].sort(() => 0.5 - Math.random());
+            let mapping = {}; // { '🐶': 2, '🐱': 5 ... }
+            selectedEmojis.forEach((emo, i) => {
+                mapping[emo] = shuffledNumbers[i];
+            });
+
+            // İpucu Satırları Oluştur
+            // Mantık: Her satırda emojiler gösterilir ve karşısında sayıları yazar.
+            // Çocuk görsel eşleştirme yapar.
+            let hints = [];
+            // 2 adet ipucu satırı oluştur (farklı sıralamalarla)
+            for(let i=0; i<2; i++) {
+                let rowEmojis = [...selectedEmojis].sort(() => 0.5 - Math.random());
+                let rowNumbers = rowEmojis.map(e => mapping[e]);
+                hints.push({ emojis: rowEmojis, numbers: rowNumbers });
+            }
+
+            // Soru Satırı Oluştur
+            let questionEmojis = [...selectedEmojis].sort(() => 0.5 - Math.random());
+            let solution = questionEmojis.map(e => mapping[e]);
+
+            // Durumu güncelle
+            currentLevelData.solution = solution;
+            currentLevelData.userAnswer = new Array(itemSize).fill(null);
+
+            // Arayüzü Çiz
+            renderUI(hints, questionEmojis);
+            speak(`Bölüm ${gameState.chapter}, Soru ${gameState.level}. Dikkatli bak.`);
+        }
+
+        function renderUI(hints, questionEmojis) {
+            // Başlık Güncelle
+            document.getElementById('chapter-level-display').innerText = `Bölüm ${gameState.chapter} - Soru ${gameState.level}/5`;
+            
+            let heartsStr = "";
+            for(let i=0; i<gameState.lives; i++) heartsStr += "❤️";
+            for(let i=gameState.lives; i<3; i++) heartsStr += "🖤";
+            document.getElementById('hearts-display').innerText = heartsStr;
+
+            // İpuçlarını Çiz
+            const hintPanel = document.getElementById('hint-panel');
+            hintPanel.innerHTML = '';
+            hints.forEach(hint => {
+                let html = `<div class="hint-row">
+                    <div class="hint-group">
+                        ${hint.emojis.map(e => getIconHTML(e)).join(' ')}
+                    </div>
+                    <div class="arrow">➡</div>
+                    <div class="hint-group" style="color:var(--accent); letter-spacing:5px; font-weight:bold;">
+                        ${hint.numbers.join(' ')}
+                    </div>
+                </div>`;
+                hintPanel.innerHTML += html;
+            });
+
+            // Soruyu Çiz
+            const qRow = document.getElementById('question-row');
+            qRow.innerHTML = questionEmojis.map(e => getIconHTML(e)).join(' ') + ' <span style="color:#ccc">=</span> <span style="color:var(--primary)">?</span>';
+
+            // Cevap Slotlarını Çiz
+            const slotsDiv = document.getElementById('answer-slots');
+            slotsDiv.innerHTML = '';
+            currentLevelData.userAnswer.forEach((val, idx) => {
+                let activeClass = (getFirstEmptyIndex() === idx) ? 'active' : '';
+                let content = val === null ? '' : val;
+                let filledClass = val !== null ? 'filled' : '';
+                slotsDiv.innerHTML += `<div class="slot ${activeClass} ${filledClass}">${content}</div>`;
+            });
+        }
+
+        // --- GİRİŞ KONTROLÜ ---
+
+        function getFirstEmptyIndex() {
+            return currentLevelData.userAnswer.indexOf(null);
+        }
+
+        function handleInput(num) {
+            let idx = getFirstEmptyIndex();
+            if (idx !== -1) {
+                currentLevelData.userAnswer[idx] = num;
+                updateSlots();
+                
+                // Eğer dolduysa kontrol et
+                if (getFirstEmptyIndex() === -1) {
+                    setTimeout(checkAnswer, 500);
+                }
+            }
+        }
+
+        function handleDelete() {
+            // Sondan sil
+            // Tersten bakarak ilk dolu olanı bul ve sil
+            for (let i = currentLevelData.userAnswer.length - 1; i >= 0; i--) {
+                if (currentLevelData.userAnswer[i] !== null) {
+                    currentLevelData.userAnswer[i] = null;
+                    updateSlots();
+                    return;
+                }
+            }
+        }
+
+        function updateSlots() {
+            const slots = document.querySelectorAll('.slot');
+            currentLevelData.userAnswer.forEach((val, i) => {
+                slots[i].innerText = val === null ? '' : val;
+                slots[i].className = `slot ${val!==null?'filled':''} ${getFirstEmptyIndex()===i?'active':''}`;
+            });
+        }
+
+        function checkAnswer() {
+            const isCorrect = JSON.stringify(currentLevelData.userAnswer) === JSON.stringify(currentLevelData.solution);
+
+            if (isCorrect) {
+                // DOĞRU
+                speak("Harikasın! Doğru bildin.");
+                document.getElementById('question-panel').style.background = "#D1F2EB"; // Yeşilimsi
+                setTimeout(() => {
+                    document.getElementById('question-panel').style.background = "white";
+                    nextLevel();
+                }, 1500);
+            } else {
+                // YANLIŞ
+                document.getElementById('question-panel').classList.add('shake');
+                speak("Olamaz! Tekrar dene.");
+                loseLife();
+                setTimeout(() => {
+                    document.getElementById('question-panel').classList.remove('shake');
+                    // Cevapları sıfırla
+                    currentLevelData.userAnswer.fill(null);
+                    updateSlots();
+                }, 1000);
+            }
+        }
+
+        function loseLife() {
+            gameState.lives--;
+            let heartsStr = "";
+            for(let i=0; i<gameState.lives; i++) heartsStr += "❤️";
+            for(let i=gameState.lives; i<3; i++) heartsStr += "🖤";
+            document.getElementById('hearts-display').innerText = heartsStr;
+
+            if (gameState.lives <= 0) {
+                setTimeout(() => {
+                    speak("Canların bitti. Bu bölüme baştan başlayalım.");
+                    gameState.lives = 3;
+                    gameState.level = 1; // Sadece o bölümün başına dön
+                    saveGame();
+                    generateLevel();
+                }, 2000);
+            } else {
+                saveGame();
+            }
+        }
+
+        function nextLevel() {
+            gameState.level++;
+            
+            // Bölüm Bitti mi? (5 Soru)
+            if (gameState.level > 5) {
+                // Bölüm tamamlandı
+                completeChapter();
+            } else {
+                saveGame();
+                generateLevel();
+            }
+        }
+
+        function completeChapter() {
+            // Ödül var mı kontrol et
+            const reward = REWARD_MAP[gameState.chapter];
+            
+            if (reward) {
+                speak(`Tebrikler! Bölüm ${gameState.chapter} bitti. Şimdi ödülünü boyama zamanı!`);
+                openColoringModal(reward);
+            } else {
+                // Ödül yoksa direkt sonraki bölüm (Sonsuz döngü gibi)
+                gameState.chapter++;
+                gameState.level = 1;
+                saveGame();
+                speak("Tebrikler! Diğer bölüme geçiyoruz.");
+                generateLevel();
+            }
+        }
+
+        // --- BOYAMA VE SVG SİSTEMİ ---
+
+        // Basit SVG Şablonları (Path verileri)
+        const SVG_TEMPLATES = {
+            'bear': `
+                <circle cx="50" cy="50" r="45" fill="#ddd" id="head" class="paintable"/>
+                <circle cx="20" cy="25" r="15" fill="#bbb" id="ear_l" class="paintable"/>
+                <circle cx="80" cy="25" r="15" fill="#bbb" id="ear_r" class="paintable"/>
+                <circle cx="35" cy="45" r="5" fill="#333" />
+                <circle cx="65" cy="45" r="5" fill="#333" />
+                <ellipse cx="50" cy="65" rx="15" ry="10" fill="#eee" id="snout" class="paintable"/>
+                <circle cx="50" cy="60" r="4" fill="#000" />
+            `,
+            'cat': `
+                <polygon points="20,20 40,80 10,60" fill="#ccc" id="ear_l" class="paintable"/>
+                <polygon points="80,20 60,80 90,60" fill="#ccc" id="ear_r" class="paintable"/>
+                <ellipse cx="50" cy="60" rx="40" ry="35" fill="#eee" id="head" class="paintable"/>
+                <circle cx="35" cy="55" r="4" fill="#333"/>
+                <circle cx="65" cy="55" r="4" fill="#333"/>
+                <polygon points="45,65 55,65 50,75" fill="pink" id="nose" class="paintable"/>
+            `,
+            'rabbit': `
+                <ellipse cx="35" cy="30" rx="10" ry="25" fill="#fff" stroke="#ccc" id="ear_l" class="paintable"/>
+                <ellipse cx="65" cy="30" rx="10" ry="25" fill="#fff" stroke="#ccc" id="ear_r" class="paintable"/>
+                <circle cx="50" cy="60" r="30" fill="#fff" stroke="#ccc" id="head" class="paintable"/>
+                <circle cx="40" cy="55" r="3" fill="#333"/>
+                <circle cx="60" cy="55" r="3" fill="#333"/>
+                <circle cx="50" cy="65" r="3" fill="pink"/>
+            `
+        };
+
+        function openColoringModal(reward) {
+            document.getElementById('game-container').style.display = 'none';
+            const modal = document.getElementById('coloring-modal');
+            modal.style.display = 'flex';
+            
+            // Şimdiki boyanacak ID
+            currentPainting.svgId = reward.svgId;
+            currentPainting.rewardEmoji = reward.emoji; // Hangi emoji değişecek
+            currentPainting.colors = {}; // Renkleri sıfırla
+
+            // SVG'yi ekrana bas (Viewbox 0 0 100 100)
+            const container = document.getElementById('coloring-canvas-container');
+            container.innerHTML = `<svg viewBox="0 0 100 100" width="100%" height="100%">
+                ${SVG_TEMPLATES[reward.svgId]}
+            </svg>`;
+
+            // Tıklama olaylarını ekle
+            const paintables = container.querySelectorAll('.paintable');
+            paintables.forEach(el => {
+                el.onclick = function() {
+                    this.setAttribute('fill', selectedPaintColor);
+                    currentPainting.colors[this.id] = selectedPaintColor;
+                    // Basit bir ses efekti eklenebilir
+                }
+            });
+        }
+
+        function selectColor(color) {
+            selectedPaintColor = color;
+            // UI güncelle
+            document.querySelectorAll('.color-swatch').forEach(el => {
+                el.classList.remove('selected');
+                // rgb dönüşümü nedeniyle basit kontrol yapılamayabilir ama style kontrolü yeterli
+                if (el.style.background.includes(color) || (color==='#FFFFFF' && el.style.background.includes('rgb(255, 255, 255)'))) { 
+                   // el.classList.add('selected'); // Basit tutalım
+                }
+            });
+            event.target.classList.add('selected');
+        }
+
+        function saveCharacterAndContinue() {
+            // Karakteri kaydet
+            gameState.customCharacters[currentPainting.rewardEmoji] = {
+                svgId: currentPainting.svgId,
+                colors: currentPainting.colors
+            };
+
+            // Bölümü ve Leveli ilerlet
+            gameState.chapter++;
+            gameState.level = 1;
+            gameState.lives = 3; // Canları yenile
+            
+            saveGame();
+
+            // Ekranı kapat oyuna dön
+            document.getElementById('coloring-modal').style.display = 'none';
+            document.getElementById('game-container').style.display = 'flex';
+            speak("Karakterin çok güzel oldu! Artık oyunda onu göreceksin.");
+            
+            generateLevel();
+        }
+
+        // Özelleştirilmiş karakteri oyun içinde render eden fonksiyon
+        function generateCustomSVG(emoji, customData) {
+            let template = SVG_TEMPLATES[customData.svgId];
+            
+            // Renkleri değiştir
+            // Template string üzerinde replace yapmak yerine DOM parser daha güvenli ama
+            // performans için basit string replace yapalım (id="head" fill="...")
+            
+            // Daha sağlam yöntem: Geçici bir div oluşturup manipüle edelim.
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = `<svg class="game-svg-icon" viewBox="0 0 100 100">${template}</svg>`;
+            
+            for (const [partId, color] of Object.entries(customData.colors)) {
+                const el = tempDiv.querySelector(`#${partId}`);
+                if (el) el.setAttribute('fill', color);
+            }
+
+            return tempDiv.innerHTML;
+        }
+
+        // Başlat
+        init();
+
+    </script>
+</body>
+</html>
